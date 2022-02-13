@@ -97,7 +97,7 @@ namespace RecentFollowers
             // initialize properties
             outputFolder = Path.Combine(Directory.GetCurrentDirectory(), "output");
 
-            // first argument: output path heartbeat
+            // first argument: custom output path
             if (args.Length > 0)
             {
                 if (!Directory.Exists(args[0]))
@@ -129,6 +129,15 @@ namespace RecentFollowers
             followerPath = Path.Combine(followerPath, "currentFollower.txt");
             totalPath = Path.Combine(totalPath, "totalFollowerCount.txt");
 
+            // Get permission and token
+            var authProcess = Process.Start("lib/twitch.exe", new string[] { "configure", "-i", "Twitch-API-Client-ID", "-s", "Twitch-API-Client-Secret" }); // <-- Replace this with your own APP credentials!
+            authProcess.WaitForExit();
+            // ToDo: to be verified.
+            // User Token not needed for App Access
+            //var tokenProcess = Process.Start("lib/twitch.exe", new string[] { "token", "-u" });
+            var tokenProcess = Process.Start("lib/twitch.exe", new string[] { "token" });
+            tokenProcess.WaitForExit();
+
             var userFile = "user.json";
 
             if (File.Exists(userFile))
@@ -140,12 +149,6 @@ namespace RecentFollowers
             {
                 Console.Write("Enter your Twitch name: ");
                 var userName = Console.ReadLine();
-
-                // Get permission and token
-                var authProcess = Process.Start("lib/twitch.exe", new string[] { "configure", "-i", "Twitch-API-Client-ID", "-s", "Twitch-API-Client-Secret" }); // <-- Replace this with your own APP credentials!
-                authProcess.WaitForExit();
-                var tokenProcess = Process.Start("lib/twitch.exe", new string[] { "token", "-u" });
-                tokenProcess.WaitForExit();
 
                 // Get Twitch user...
                 twitchStreamer = await GetTwitchUserByName(userName);
