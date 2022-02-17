@@ -4,7 +4,7 @@ Get your most recent Twitch followers for creating a follower rotation or displa
 ## What is this?
 This small console application will gather information from your Twitch account and write it down to a text file.
 
-In addition it grabs your 5 most recent follower names and rotates them every 5 seconds. For those followers, their avatars are also stored locally and are enriched with their Twitch display names.
+In addition it grabs your 5 most recent follower names and rotates them every 10 seconds. For those followers, their avatars are also stored locally and are enriched with their Twitch display names.
 
 ## What do I get?
 
