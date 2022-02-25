@@ -40,6 +40,12 @@ namespace RecentFollowers
 
         private static FollowerListObject RecentFollowers { get; set; }
 
+        // fields needed to prevent garbage collection
+        private static Timer heartbeatTimer;
+        private static Timer viewerTimer;
+        private static Timer followerTimer;
+        private static Timer displayTimer;
+
         static int Main(string[] args)
         {
             // Initialize serilog logger
@@ -150,17 +156,21 @@ namespace RecentFollowers
                 await createStream.DisposeAsync();
             }
 
+            Log.Logger.Information($"Gathering information for {twitchStreamer.DisplayName}...");
+
 #if DEBUG
             runHeartbeatTask();
 #else
-            new Timer(x => runHeartbeatTask(), null, 0, 5000);
-            new Timer(x => runViewerTask(), null, 0, 5000);
-            new Timer(x => runFollowerTask(), null, 0, 8000);
+            heartbeatTimer = new Timer(x => runHeartbeatTask(), null, 0, 5000);
+            viewerTimer = new Timer(x => runViewerTask(), null, 0, 5000);
+            followerTimer = new Timer(x => runFollowerTask(), null, 0, 8000);
+            displayTimer = new Timer(x => OutputToConsole(), null, 5000, 1000);
 #endif
 
-            Log.Logger.Information($"Gathering information for {twitchStreamer.DisplayName}...");
             Console.Title = $"Recent Followers for OBS - output to {outputFolder}";
-            Console.ReadLine();
+
+            // Block this task until the program is closed.
+            await Task.Delay(-1);
         }
 
         private static void runHeartbeatTask()
@@ -168,7 +178,6 @@ namespace RecentFollowers
             var rnd = new Random();
             displayHeartbeat = rnd.Next(147, 222).ToString();
             WriteToTextFile(heartbeatPath, displayHeartbeat);
-            OutputToConsole();
 #if DEBUG
             runViewerTask();
 #endif
@@ -255,6 +264,9 @@ namespace RecentFollowers
 
                 EditAndSaveAvatar(byteArray, twitchUser.DisplayName, Path.Combine(outputFolder, fileName));
             }
+#if DEBUG
+            OutputToConsole();
+#endif
         }
 
         private static async Task<FollowerListObject> GetFollowersFromTwitch()
