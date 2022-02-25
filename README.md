@@ -1,10 +1,10 @@
-# Recent Twitch followers for OBS [![Licensed under the MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/dichternebel/recent-followers-for-obs/blob/main/LICENSE.md)
+# Recent Twitch followers for OBS [![Licensed under the MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/dichternebel/recent-followers-for-obs/blob/main/LICENSE)
 Get your most recent Twitch followers for creating a follower rotation or displaying their avatars in OBS.
 
 ## What is this?
 This small console application will gather information from your Twitch account and write it down to a text file.
 
-In addition it grabs your 5 most recent follower names and rotates them every 5 seconds. For those followers, their avatars are also stored locally and are enriched with their Twitch display names.
+In addition it grabs your 5 most recent follower names and rotates them every 8 seconds. For those followers, their avatars are also stored locally and are enriched with their Twitch display names.
 
 ## What do I get?
 

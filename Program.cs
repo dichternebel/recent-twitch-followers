@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 
 using CliWrap;
 using CliWrap.Buffered;
@@ -20,15 +21,20 @@ namespace RecentFollowers
     class Program
     {
         private static int currentFollower = -1;
-        
+
+        private static string clientID { get; set; }
+        private static string clientSecret { get; set; }
+
         private static string displayHeartbeat { get; set; }
         private static string displayFollower { get; set; }
         private static string displayTotal { get; set; }
+        private static string displayViewerCount { get; set; }
 
         private static string outputFolder { get; set; }
         private static string heartbeatPath { get; set; }
         private static string followerPath { get; set; }
         private static string totalPath { get; set; }
+        private static string viewerPath { get; set; }
 
         private static TwitchUser twitchStreamer { get; set; }
 
@@ -69,22 +75,6 @@ namespace RecentFollowers
             {
                 using (var client = new WebClient())
                 {
-                    // current:
-                    // https://github.com/twitchdev/twitch-cli/releases/download/v1.1.5/twitch-cli_1.1.5_Windows_x86_64.zip 
-
-                    // getting latest in powershell:
-                    // $githubLatestReleases = "https://api.github.com/repos/microsoft/azure-pipelines-agent/releases/latest"
-                    // $githubLatestReleasesJson = ((Invoke - WebRequest $gitHubLatestReleases) | ConvertFrom - Json).assets.browser_download_url
-                    // $Uri = (((Invoke - WebRequest $githubLatestReleasesJson | ConvertFrom - Json).downloadUrl) | Select - String "vsts-agent-win-x64").ToString()
-
-                    // do this in .net
-                    //var latestReleaseUrl = @"https://api.github.com/repos/twitchdev/twitch-cli/releases/latest";
-                    //var latestRelease =  client.DownloadString(latestReleaseUrl); // <-- FORBIDDDDEN??? WTF!!!
-                    //var jsonDoc = JsonSerializer.Deserialize<dynamic>(latestRelease);
-                    //var root = jsonDoc.RootElement;
-
-                    // FUCK! Then version hard-coded... already hate myself... :-/
-
                     if (!Directory.Exists(libPath)) Directory.CreateDirectory(libPath);
                     var zipPath = Path.Combine(libPath, "twitch-cli_1.1.5_Windows_x86_64.zip");
                     Log.Logger.Information($"Downloading Twitch-CLI to {zipPath}...");
@@ -123,18 +113,20 @@ namespace RecentFollowers
                 }
             }
 
-            heartbeatPath = followerPath = totalPath = outputFolder;
+            heartbeatPath = followerPath = totalPath = viewerPath = outputFolder;
 
             heartbeatPath = Path.Combine(heartbeatPath, "currentHeartBeat.txt");
             followerPath = Path.Combine(followerPath, "currentFollower.txt");
             totalPath = Path.Combine(totalPath, "totalFollowerCount.txt");
+            viewerPath = Path.Combine(viewerPath, "viewerCount.txt");
+
+            clientID = ConfigurationManager.AppSettings["ClientID"];
+            clientSecret = ConfigurationManager.AppSettings["ClientSecret"];
 
             // Get permission and token
-            var authProcess = Process.Start("lib/twitch.exe", new string[] { "configure", "-i", "Twitch-API-Client-ID", "-s", "Twitch-API-Client-Secret" }); // <-- Replace this with your own APP credentials!
+            var authProcess = Process.Start("lib/twitch.exe", new string[] { "configure", "-i", clientID, "-s", clientSecret });
             authProcess.WaitForExit();
-            // ToDo: to be verified.
-            // User Token not needed for App Access
-            //var tokenProcess = Process.Start("lib/twitch.exe", new string[] { "token", "-u" });
+
             var tokenProcess = Process.Start("lib/twitch.exe", new string[] { "token" });
             tokenProcess.WaitForExit();
 
@@ -159,17 +151,11 @@ namespace RecentFollowers
             }
 
 #if DEBUG
-            hartbeatTimer_Elapsed(null, null);
+            runHeartbeatTask();
 #else
-            var hartbeatTimer = new Timer(5000);
-            hartbeatTimer.Elapsed += hartbeatTimer_Elapsed;
-
-            var followerTimer = new Timer(10000);
-            followerTimer.Elapsed += followerTimer_Elapsed;
-            followerTimer_Elapsed(null, null); // start now!
-
-            hartbeatTimer.Start();
-            followerTimer.Start();
+            new Timer(x => runHeartbeatTask(), null, 0, 5000);
+            new Timer(x => runViewerTask(), null, 0, 5000);
+            new Timer(x => runFollowerTask(), null, 0, 8000);
 #endif
 
             Log.Logger.Information($"Gathering information for {twitchStreamer.DisplayName}...");
@@ -177,18 +163,49 @@ namespace RecentFollowers
             Console.ReadLine();
         }
 
-        private static void hartbeatTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private static void runHeartbeatTask()
         {
             var rnd = new Random();
             displayHeartbeat = rnd.Next(147, 222).ToString();
             WriteToTextFile(heartbeatPath, displayHeartbeat);
             OutputToConsole();
 #if DEBUG
-            followerTimer_Elapsed(null, null);
+            runViewerTask();
 #endif
         }
 
-        private static async void followerTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private static async void runViewerTask()
+        {
+            displayViewerCount = await GetViewerCountFromTwitch();
+            WriteToTextFile(viewerPath, displayViewerCount);
+#if DEBUG
+            runFollowerTask();
+#endif
+        }
+
+        private static async Task<string> GetViewerCountFromTwitch()
+        {
+            int currentViewerCount = 0;
+
+            try
+            {
+                var result = await Cli.Wrap("lib/twitch.exe").WithArguments($"api get /streams -q user_id={twitchStreamer.Id}").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
+                var streamObject = JsonSerializer.Deserialize<StreamObject>(result.StandardOutput);
+
+                if (streamObject.Streams.Count > 0)
+                {
+                    currentViewerCount = streamObject.Streams[0].ViewerCount;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Logger.Error(ex.Message);
+            }
+
+            return currentViewerCount.ToString();
+        }
+
+        private static async void runFollowerTask()
         {
             var followerListChanged = false;
             var currentFollowers = await GetFollowersFromTwitch();
@@ -246,7 +263,6 @@ namespace RecentFollowers
 
             try
             {
-                //Log.Logger.Debug($"Getting most recent followers for {twitchStreamer.DisplayName}...");
                 // Get the five most recent followers
                 var result = await Cli.Wrap("lib/twitch.exe").WithArguments($"api get /users/follows -q to_id={twitchStreamer.Id} -q first=5").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
                 followerListObject = JsonSerializer.Deserialize<FollowerListObject>(result.StandardOutput);
@@ -337,6 +353,7 @@ namespace RecentFollowers
             Console.WriteLine("Random BPM      : " + displayHeartbeat);
             Console.WriteLine("Current follower: " + displayFollower);
             Console.WriteLine("Total followers : " + displayTotal);
+            Console.WriteLine("Current viewers : " + displayViewerCount);
         }
 
         public static bool IsObjectEqual(object x, object y)

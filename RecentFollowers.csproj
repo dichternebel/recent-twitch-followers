@@ -9,6 +9,10 @@
     <ApplicationIcon>DichterNebe1.ico</ApplicationIcon>
     <Platforms>AnyCPU;x64</Platforms>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <Version>1.1.0</Version>
+    <Authors>dichternebel</Authors>
+    <RepositoryType></RepositoryType>
+    <Company />
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -27,6 +31,7 @@
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="1.0.4" />
     <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta13" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>
