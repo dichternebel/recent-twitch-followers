@@ -35,6 +35,8 @@ namespace RecentFollowers
 
         [JsonPropertyName("view_count")]
         public int ViewCount { get; set; }
+
+        public string OutputFolder { get; set; }
     }
 
     public class TwitchUserObject

@@ -40,11 +40,15 @@ namespace RecentFollowers
 
         private static FollowerListObject RecentFollowers { get; set; }
 
-        // fields needed to prevent garbage collection
+#pragma warning disable IDE0051 // Remove unused private members
+#pragma warning disable IDE0052 // Remove unused private members
+        // Warning disabled since fields are needed to prevent garbage collection!
         private static Timer heartbeatTimer;
         private static Timer viewerTimer;
         private static Timer followerTimer;
         private static Timer displayTimer;
+#pragma warning restore IDE0051 // Remove unused private members
+#pragma warning restore IDE0052 // Remove unused private members
 
         static int Main(string[] args)
         {
@@ -90,41 +94,23 @@ namespace RecentFollowers
                 }
             }
 
-            // initialize properties
+            // initialize outputFolder
             outputFolder = Path.Combine(Directory.GetCurrentDirectory(), "output");
 
             // first argument: custom output path
             if (args.Length > 0)
             {
-                if (!Directory.Exists(args[0]))
-                {
-                    Log.Logger.Error($"Could not find target output folder '{args[0]}'. Please make sure it is there!");
-                    Log.Logger.Information("Aborting. Press any key to exit...");
-                    Console.ReadKey();
-                    return;
-                }
-
-                outputFolder = args[0];
+                outputFolder = Path.GetFullPath(args[0]);
             }
-            else
+            if (!Directory.Exists(outputFolder))
             {
-                if (!Directory.Exists(outputFolder))
-                {
-                    var di = Directory.CreateDirectory(outputFolder);
+                var di = Directory.CreateDirectory(outputFolder);
 
-                    if (di.Exists)
-                    {
-                        Log.Logger.Information("Output folder created successfully.");
-                    }
+                if (di.Exists)
+                {
+                    Log.Logger.Information("Output folder created successfully.");
                 }
             }
-
-            heartbeatPath = followerPath = totalPath = viewerPath = outputFolder;
-
-            heartbeatPath = Path.Combine(heartbeatPath, "currentHeartBeat.txt");
-            followerPath = Path.Combine(followerPath, "currentFollower.txt");
-            totalPath = Path.Combine(totalPath, "totalFollowerCount.txt");
-            viewerPath = Path.Combine(viewerPath, "viewerCount.txt");
 
             clientID = ConfigurationManager.AppSettings["ClientID"];
             clientSecret = ConfigurationManager.AppSettings["ClientSecret"];
@@ -142,19 +128,38 @@ namespace RecentFollowers
             {
                 var jsonString = File.ReadAllText(userFile);
                 twitchStreamer = JsonSerializer.Deserialize<TwitchUser>(jsonString);
+
+                // New output folder passed as argument
+                if (args.Length > 0)
+                {
+                    twitchStreamer.OutputFolder = outputFolder;
+                }
+                else if (!string.IsNullOrWhiteSpace(twitchStreamer.OutputFolder))
+                {
+                    outputFolder = twitchStreamer.OutputFolder;
+                }
             }
             else
             {
                 Console.Write("Enter your Twitch name: ");
                 var userName = Console.ReadLine();
 
-                // Get Twitch user...
+                // Get Twitch user
                 twitchStreamer = await GetTwitchUserByName(userName);
-                // ... and write to file
-                using FileStream createStream = File.Create(userFile);
-                await JsonSerializer.SerializeAsync(createStream, twitchStreamer);
-                await createStream.DisposeAsync();
+                // Set the given output folder
+                twitchStreamer.OutputFolder = outputFolder;
             }
+
+            // Always update user information on application start
+            using FileStream createStream = File.Create(userFile);
+            await JsonSerializer.SerializeAsync(createStream, twitchStreamer);
+            await createStream.DisposeAsync();
+
+            // Set file paths
+            heartbeatPath = Path.Combine(outputFolder, "currentHeartBeat.txt");
+            followerPath = Path.Combine(outputFolder, "currentFollower.txt");
+            totalPath = Path.Combine(outputFolder, "totalFollowerCount.txt");
+            viewerPath = Path.Combine(outputFolder, "currentViewerCount.txt");
 
             Log.Logger.Information($"Gathering information for {twitchStreamer.DisplayName}...");
 
@@ -256,11 +261,14 @@ namespace RecentFollowers
                 var twitchUser = await GetTwitchUserByName(follower.FollowerName);
                 if (twitchUser == null) continue;
 
+                var fileId = i + 1;
+                var followerFileName = $"follower{fileId}.txt";
+                WriteToTextFile(Path.Combine(outputFolder, followerFileName), twitchUser.DisplayName);
+                
                 var byteArray = GetAvatarFromTwitch(twitchUser);
                 if (byteArray == null) continue;
 
-                var fileId = i + 1;
-                var fileName = "avatar" + fileId + ".png";
+                var fileName = $"avatar{fileId}.png";
 
                 EditAndSaveAvatar(byteArray, twitchUser.DisplayName, Path.Combine(outputFolder, fileName));
             }
