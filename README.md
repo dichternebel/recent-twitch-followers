@@ -27,7 +27,7 @@ Plus this app
 Well, for example something like this:  
 ![follower rotation animation](assets/follower_rotation.gif)
 
-Please have a look at my [Twitch channel]((https://twitch.tv/dichternebe1)) to see it in action. I am using it to create the intro scene, the follower rotation and outro scene. And of course that heartbeat fake display!
+Please have a look at my [Twitch channel](https://twitch.tv/dichternebe1) to see it in action. I am using it to create the intro scene, the follower rotation and outro scene. And of course that heartbeat fake display!
 
 [![https://twitch.tv/dichternebe1](https://static-cdn.jtvnw.net/jtv_user_pictures/95c739c7-5731-4966-9c07-9e7884aee938-profile_image-150x150.png)](https://twitch.tv/dichternebe1)
 
