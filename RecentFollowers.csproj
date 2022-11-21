@@ -9,7 +9,7 @@
     <ApplicationIcon>DichterNebe1.ico</ApplicationIcon>
     <Platforms>AnyCPU;x64</Platforms>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
     <Authors>dichternebel</Authors>
     <RepositoryType></RepositoryType>
     <Company />

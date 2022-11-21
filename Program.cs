@@ -15,6 +15,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.Fonts;
+using System.Linq;
 
 namespace RecentFollowers
 {
@@ -83,14 +84,14 @@ namespace RecentFollowers
             // Get the twitch-cli if not present
             if (!File.Exists(Path.Combine(libPath, "twitch.exe")))
             {
-                using (var client = new WebClient())
+                getTwitchCliFromGitHub(libPath);
+            }
+            else
+            {
+                var cliVersion = await Cli.Wrap("lib/twitch.exe").WithArguments("version").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
+                if (cliVersion.StandardOutput != "twitch-cli/1.1.12\n")
                 {
-                    if (!Directory.Exists(libPath)) Directory.CreateDirectory(libPath);
-                    var zipPath = Path.Combine(libPath, "twitch-cli_1.1.5_Windows_x86_64.zip");
-                    Log.Logger.Information($"Downloading Twitch-CLI to {zipPath}...");
-                    client.DownloadFile(@"https://github.com/twitchdev/twitch-cli/releases/download/v1.1.5/twitch-cli_1.1.5_Windows_x86_64.zip", zipPath);
-                    ZipFile.ExtractToDirectory(zipPath, libPath, true);
-                    File.Delete(zipPath);
+                    getTwitchCliFromGitHub(libPath);
                 }
             }
 
@@ -176,6 +177,49 @@ namespace RecentFollowers
 
             // Block this task until the program is closed.
             await Task.Delay(-1);
+        }
+
+        private static void getTwitchCliFromGitHub(string libPath)
+        {
+            using (var client = new WebClient())
+            {
+                if (!Directory.Exists(libPath))
+                {
+                    Directory.CreateDirectory(libPath);
+                }
+                else
+                {
+                    new DirectoryInfo(libPath).GetFileSystemInfos().ToList().ForEach(x =>
+                    {
+                        if (x is DirectoryInfo di)
+                            di.Delete(true);
+                        else
+                            x.Delete();
+                    });
+                }
+                var zipPath = Path.Combine(libPath, "twitch-cli_1.1.12_Windows_x86_64.zip");
+                Log.Logger.Information($"Downloading Twitch-CLI to {zipPath}...");
+                client.DownloadFile(@"https://github.com/twitchdev/twitch-cli/releases/download/v1.1.12/twitch-cli_1.1.12_Windows_x86_64.zip", zipPath);
+                ZipFile.ExtractToDirectory(zipPath, libPath, true);
+                File.Delete(zipPath);
+
+                var extractedPath = Path.Combine(libPath, "twitch-cli_1.1.12_Windows_x86_64");
+                if (Directory.Exists(extractedPath))
+                {
+                    string[] files = Directory.GetFiles(extractedPath);
+
+                    // Move the files to the lib
+                    foreach (string s in files)
+                    {
+                        var fileName = Path.GetFileName(s);
+                        var destFile = Path.Combine(libPath, fileName);
+                        File.Move(s, destFile);
+                    }
+
+                    // Remove empty folder
+                    Directory.Delete(extractedPath, true);
+                }
+            }
         }
 
         private static void runHeartbeatTask()

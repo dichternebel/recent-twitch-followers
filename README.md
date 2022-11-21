@@ -1,5 +1,5 @@
 # Recent Twitch followers for OBS [![Licensed under the MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/dichternebel/recent-followers-for-obs/blob/main/LICENSE)
-Get your most recent Twitch followers for creating a follower rotation or displaying their avatars in OBS.
+Get your most recent Twitch followers for creating a follower rotation or displaying their avatars in OBS or wherever.
 
 ## What is this?
 This small console application will gather public information from your Twitch account and write it down to text files that can be used in OBS or whatever you like.
@@ -38,6 +38,7 @@ Simple!
 - Optional: If you want to have the output folder somewhere else, just call the executable once with a parameter pointing to that location (relative or absolute).
 - Enter your Twitch username, allow the application to connect to Twitch and that's it.
 
+If you are updating from a previous version all you have to do is to replace the .exe file.
 Please keep the application running to get the job done as long as you are streaming or working in OBS.
 
 ## What has to be done in OBS?
