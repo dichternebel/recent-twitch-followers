@@ -5,8 +5,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 
 using CliWrap;
 using CliWrap.Buffered;
@@ -51,8 +51,7 @@ namespace RecentFollowers
         private static Timer heartbeatTimer;
         private static Timer viewerTimer;
         private static Timer followerTimer;
-        //private static Timer displayTimer;
-        private static System.Timers.Timer displayTimer;
+        private static Timer displayTimer;
 #pragma warning restore IDE0051 // Remove unused private members
 #pragma warning restore IDE0052 // Remove unused private members
 
@@ -80,9 +79,6 @@ namespace RecentFollowers
 
         static async Task MainAsync(string[] args)
         {
-            // Hide cursor
-            Console.CursorVisible = false;
-
             // Name this thing
             Console.Title = "Recent Followers for OBS";
 
@@ -159,6 +155,9 @@ namespace RecentFollowers
                 twitchStreamer.OutputFolder = outputFolder;
             }
 
+            // Hide cursor
+            Console.CursorVisible = false;
+
             // Always update user information on application start
             using FileStream createStream = File.Create(userFile);
             await JsonSerializer.SerializeAsync(createStream, twitchStreamer);
@@ -173,15 +172,19 @@ namespace RecentFollowers
             Log.Logger.Information($"Gathering information for {twitchStreamer.DisplayName}...");
 
 #if DEBUG
-            runHeartbeatTask();
+            runHeartbeatTask(null, null);
 #else
-            heartbeatTimer = new Timer(x => runHeartbeatTask(), null, 0, 5000);
-            viewerTimer = new Timer(x => runViewerTask(), null, 0, 5000);
-            followerTimer = new Timer(x => runFollowerTask(), null, 0, 8000);
-            //displayTimer = new Timer(x => OutputToConsole(), null, 7500, 1000);
-            displayTimer = new System.Timers.Timer(500);
-            displayTimer.Elapsed += new System.Timers.ElapsedEventHandler(OutputToConsole);
-
+            heartbeatTimer = new Timer(5000);
+            heartbeatTimer.Elapsed += runHeartbeatTask;
+            heartbeatTimer.Start();
+            viewerTimer = new Timer(5000);
+            viewerTimer.Elapsed += runViewerTask;
+            viewerTimer.Start();
+            followerTimer = new Timer(8000);
+            viewerTimer.Elapsed += runFollowerTask;
+            followerTimer.Start();
+            displayTimer = new Timer(500);
+            displayTimer.Elapsed += OutputToConsole;
 #endif
 
             Console.Title = $"Recent Followers for OBS - output to {outputFolder}";
@@ -233,22 +236,22 @@ namespace RecentFollowers
             }
         }
 
-        private static void runHeartbeatTask()
+        private static void runHeartbeatTask(object sender, System.Timers.ElapsedEventArgs e)
         {
             var rnd = new Random();
             displayHeartbeat = rnd.Next(147, 222).ToString();
             WriteToTextFile(heartbeatPath, displayHeartbeat);
 #if DEBUG
-            runViewerTask();
+            runViewerTask(null, null);
 #endif
         }
 
-        private static async void runViewerTask()
+        private static async void runViewerTask(object sender, System.Timers.ElapsedEventArgs e)
         {
             displayViewerCount = await GetViewerCountFromTwitch();
             WriteToTextFile(viewerPath, displayViewerCount);
 #if DEBUG
-            runFollowerTask();
+            runFollowerTask(null, null);
 #endif
         }
 
@@ -274,13 +277,14 @@ namespace RecentFollowers
             return currentViewerCount.ToString();
         }
 
-        private static async void runFollowerTask()
+        private static async void runFollowerTask(object sender, System.Timers.ElapsedEventArgs e)
         {
             // Ugly guard
             if (followerListChanged.HasValue) return;
-
             followerListChanged = false;
+
             var currentFollowers = await GetFollowersFromTwitch();
+            if (currentFollowers == null) return;
 
             if (!IsObjectEqual(RecentFollowers,currentFollowers))
             {
@@ -318,7 +322,9 @@ namespace RecentFollowers
                 return;
             }
 
+#if !DEBUG
             displayTimer.Stop();
+#endif
 
             for (int i = 0; i < RecentFollowers.Data.Count; i++)
             {
@@ -340,11 +346,11 @@ namespace RecentFollowers
 
             followerListChanged = null;
             Console.Clear();
-            displayTimer.Start();
-
 #if DEBUG
-            //OutputToConsole();
             OutputToConsole(null, null);
+#endif
+#if !DEBUG
+            displayTimer.Start();
 #endif
         }
 
@@ -369,6 +375,7 @@ namespace RecentFollowers
         private static async Task<TwitchUser> GetTwitchUserByName(string userName)
         {
             TwitchUser twitchUser = null;
+            if (string.IsNullOrEmpty(userName)) return twitchUser;
 
             try
             {
@@ -387,6 +394,8 @@ namespace RecentFollowers
         private static byte[] GetAvatarFromTwitch(TwitchUser twitchUser)
         {
             byte[] byteArray = null;
+            if (twitchUser == null) return byteArray;
+
             try
             {
                 Log.Logger.Information($"Loading Twitch avatar for user {twitchUser.DisplayName}...");
@@ -405,6 +414,8 @@ namespace RecentFollowers
 
         private static void EditAndSaveAvatar(byte[] imageByteArray, string nameToBeAdded, string pathtoImage)
         {
+            if (imageByteArray == null) return;
+
             try
             {
                 Log.Logger.Information($"Processing Twitch avatar for user {nameToBeAdded}...");
@@ -436,7 +447,6 @@ namespace RecentFollowers
             }
         }
 
-        //private static void OutputToConsole()
         private static void OutputToConsole(object sender, System.Timers.ElapsedEventArgs e)
         {
             Console.SetCursorPosition(0, 0);
