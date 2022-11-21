@@ -23,6 +23,10 @@ namespace RecentFollowers
     {
         private static int currentFollower = -1;
 
+        private static bool? followerListChanged;
+
+        private static Font font = SystemFonts.CreateFont("Impact", 24);
+
         private static string clientID { get; set; }
         private static string clientSecret { get; set; }
 
@@ -47,7 +51,8 @@ namespace RecentFollowers
         private static Timer heartbeatTimer;
         private static Timer viewerTimer;
         private static Timer followerTimer;
-        private static Timer displayTimer;
+        //private static Timer displayTimer;
+        private static System.Timers.Timer displayTimer;
 #pragma warning restore IDE0051 // Remove unused private members
 #pragma warning restore IDE0052 // Remove unused private members
 
@@ -75,6 +80,9 @@ namespace RecentFollowers
 
         static async Task MainAsync(string[] args)
         {
+            // Hide cursor
+            Console.CursorVisible = false;
+
             // Name this thing
             Console.Title = "Recent Followers for OBS";
 
@@ -170,7 +178,10 @@ namespace RecentFollowers
             heartbeatTimer = new Timer(x => runHeartbeatTask(), null, 0, 5000);
             viewerTimer = new Timer(x => runViewerTask(), null, 0, 5000);
             followerTimer = new Timer(x => runFollowerTask(), null, 0, 8000);
-            displayTimer = new Timer(x => OutputToConsole(), null, 5000, 1000);
+            //displayTimer = new Timer(x => OutputToConsole(), null, 7500, 1000);
+            displayTimer = new System.Timers.Timer(500);
+            displayTimer.Elapsed += new System.Timers.ElapsedEventHandler(OutputToConsole);
+
 #endif
 
             Console.Title = $"Recent Followers for OBS - output to {outputFolder}";
@@ -265,11 +276,15 @@ namespace RecentFollowers
 
         private static async void runFollowerTask()
         {
-            var followerListChanged = false;
+            // Ugly guard
+            if (followerListChanged.HasValue) return;
+
+            followerListChanged = false;
             var currentFollowers = await GetFollowersFromTwitch();
 
             if (!IsObjectEqual(RecentFollowers,currentFollowers))
             {
+                Log.Logger.Debug("Follower list is getting updated...");
                 RecentFollowers = currentFollowers;
                 followerListChanged = true;
             }
@@ -297,7 +312,13 @@ namespace RecentFollowers
             WriteToTextFile(totalPath, displayTotal);
 
             // List didn't change so stop processing
-            if (!followerListChanged) return;
+            if (!followerListChanged.Value)
+            {
+                followerListChanged = null;
+                return;
+            }
+
+            displayTimer.Stop();
 
             for (int i = 0; i < RecentFollowers.Data.Count; i++)
             {
@@ -316,8 +337,14 @@ namespace RecentFollowers
 
                 EditAndSaveAvatar(byteArray, twitchUser.DisplayName, Path.Combine(outputFolder, fileName));
             }
+
+            followerListChanged = null;
+            Console.Clear();
+            displayTimer.Start();
+
 #if DEBUG
-            OutputToConsole();
+            //OutputToConsole();
+            OutputToConsole(null, null);
 #endif
         }
 
@@ -382,8 +409,6 @@ namespace RecentFollowers
             {
                 Log.Logger.Information($"Processing Twitch avatar for user {nameToBeAdded}...");
 
-                var font = SystemFonts.CreateFont("Impact", 24);
-
                 using (var image = Image.Load(imageByteArray))
                 {
                     image.Mutate(x => x.Resize(180, 180));
@@ -411,9 +436,15 @@ namespace RecentFollowers
             }
         }
 
-        private static void OutputToConsole()
+        //private static void OutputToConsole()
+        private static void OutputToConsole(object sender, System.Timers.ElapsedEventArgs e)
         {
-            Console.Clear();
+            Console.SetCursorPosition(0, 0);
+            Console.WriteLine("Random BPM      :    ");
+            Console.WriteLine("Current follower:                                ");
+            Console.WriteLine("Total followers :             ");
+            Console.WriteLine("Current viewers :             ");
+            Console.SetCursorPosition(0, 0);
             Console.WriteLine("Random BPM      : " + displayHeartbeat);
             Console.WriteLine("Current follower: " + displayFollower);
             Console.WriteLine("Total followers : " + displayTotal);
