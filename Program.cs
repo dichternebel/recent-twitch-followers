@@ -67,6 +67,7 @@ namespace RecentFollowers
 
             try
             {
+                Native.SetQuickEditMode(false);
                 MainAsync(args).Wait();
                 return 0;
             }
@@ -181,7 +182,7 @@ namespace RecentFollowers
             viewerTimer.Elapsed += runViewerTask;
             viewerTimer.Start();
             followerTimer = new Timer(8000);
-            viewerTimer.Elapsed += runFollowerTask;
+            followerTimer.Elapsed += runFollowerTask;
             followerTimer.Start();
             displayTimer = new Timer(500);
             displayTimer.Elapsed += OutputToConsole;

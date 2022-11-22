@@ -36,9 +36,9 @@ Simple!
 - Download the zip file from the [Releases](https://github.com/dichternebel/recent-followers-for-obs/releases) section.
 - Extract and start the executable somewhere e.g. in C:\StreamingTools
 - Optional: If you want to have the output folder somewhere else, just call the executable once with a parameter pointing to that location (relative or absolute).
-- Enter your Twitch username, allow the application to connect to Twitch and that's it.
+- Enter your Twitch username, hit enter and that's it.
 
-If you are updating from a previous version all you have to do is to replace the .exe file.
+If you are updating from a previous version all you have to do is to replace the .exe file.  
 Please keep the application running to get the job done as long as you are streaming or working in OBS.
 
 ## What has to be done in OBS?
