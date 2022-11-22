@@ -73,7 +73,7 @@ namespace RecentFollowers
             }
             catch (Exception ex)
             {
-                Log.Logger.Error(ex.Message);
+                Log.Logger.Error($"[Main]: {ex.Message}");
                 return 1;
             }
         }
@@ -285,7 +285,11 @@ namespace RecentFollowers
             followerListChanged = false;
 
             var currentFollowers = await GetFollowersFromTwitch();
-            if (currentFollowers == null) return;
+            if (currentFollowers == null)
+            {
+                followerListChanged = null;
+                return;
+            }
 
             if (!IsObjectEqual(RecentFollowers,currentFollowers))
             {
@@ -367,7 +371,8 @@ namespace RecentFollowers
             }
             catch (Exception ex)
             {
-                Log.Logger.Error(ex.Message);
+                Log.Logger.Error($"[GetAvatarFromTwitch]: {ex.Message}");
+                followerListChanged = null;
             }
 
             return followerListObject;
@@ -386,7 +391,8 @@ namespace RecentFollowers
             }
             catch (Exception ex)
             {
-                Log.Logger.Error(ex.Message);
+                Log.Logger.Error($"[GetTwitchUserByName]: {ex.Message}");
+                followerListChanged = null;
             }
 
             return twitchUser;
@@ -407,7 +413,8 @@ namespace RecentFollowers
             }
             catch (Exception ex)
             {
-                Log.Logger.Error(ex.Message);
+                Log.Logger.Error($"[GetAvatarFromTwitch]: {ex.Message}");
+                followerListChanged = null;
             }
 
             return byteArray;
@@ -430,7 +437,8 @@ namespace RecentFollowers
             }
             catch (Exception ex)
             {
-                Log.Logger.Error(ex.Message);
+                Log.Logger.Error($"[EditAndSaveAvatar]: {ex.Message}");
+                followerListChanged = null;
             }
         }
 
@@ -444,7 +452,7 @@ namespace RecentFollowers
             }
             catch (Exception ex)
             {
-                Log.Logger.Error(ex.Message);
+                Log.Logger.Error($"[WriteToTextFile]: {ex.Message}");
             }
         }
 
