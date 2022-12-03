@@ -1,4 +1,4 @@
-# Recent Twitch followers for OBS [![Licensed under the MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/dichternebel/recent-followers-for-obs/blob/main/LICENSE)
+# Recent Twitch followers [![Licensed under the MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/dichternebel/recent-followers-for-obs/blob/main/LICENSE)
 Get your most recent Twitch followers for creating a follower rotation or displaying their avatars in OBS or wherever.
 
 ## What is this?
@@ -48,3 +48,8 @@ To get sources for your avatar followers, just add a **"Media source"** pointing
 
 Enjoy!  
 DichterNebel
+
+---
+<font size="1">
+<a href="https://www.flaticon.com/free-icons/twitch" title="twitch icons">Twitch icons created by Laisa Islam Ani - Flaticon</a>
+</font>

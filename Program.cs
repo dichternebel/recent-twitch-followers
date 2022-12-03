@@ -16,11 +16,15 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.Fonts;
 using System.Linq;
+using System.Net.Http;
+using System.Security.Policy;
 
 namespace RecentFollowers
 {
     class Program
     {
+        private static readonly HttpClient client = new HttpClient();
+
         private static int currentFollower = -1;
 
         private static bool? followerListChanged;
@@ -81,7 +85,7 @@ namespace RecentFollowers
         static async Task MainAsync(string[] args)
         {
             // Name this thing
-            Console.Title = "Recent Followers for OBS";
+            Console.Title = "Recent Twitch Followers";
 
             // We need the twitch-cli libary for this
             var libPath = Path.Combine(Directory.GetCurrentDirectory(), "lib");
@@ -188,7 +192,7 @@ namespace RecentFollowers
             displayTimer.Elapsed += OutputToConsole;
 #endif
 
-            Console.Title = $"Recent Followers for OBS - output to {outputFolder}";
+            Console.Title = $"Recent Twitch Followers - output to {outputFolder}";
 
             // Block this task until the program is closed.
             await Task.Delay(-1);
@@ -196,44 +200,44 @@ namespace RecentFollowers
 
         private static void getTwitchCliFromGitHub(string libPath)
         {
-            using (var client = new WebClient())
+            if (!Directory.Exists(libPath))
             {
-                if (!Directory.Exists(libPath))
+                Directory.CreateDirectory(libPath);
+            }
+            else
+            {
+                new DirectoryInfo(libPath).GetFileSystemInfos().ToList().ForEach(x =>
                 {
-                    Directory.CreateDirectory(libPath);
-                }
-                else
+                    if (x is DirectoryInfo di)
+                        di.Delete(true);
+                    else
+                        x.Delete();
+                });
+            }
+
+            var currentVersion = "1.1.12";
+            var fileName = $"twitch-cli_{currentVersion}_Windows_x86_64";
+            var zipPath = Path.Combine(libPath, $"{fileName}.zip");
+
+            Log.Logger.Information($"Downloading Twitch-CLI to {zipPath}...");
+            var byteArray = client.GetByteArrayAsync($@"https://github.com/twitchdev/twitch-cli/releases/download/v{currentVersion}/{fileName}.zip").Result;
+            File.WriteAllBytes(zipPath, byteArray);
+            ZipFile.ExtractToDirectory(zipPath, libPath, true);
+            File.Delete(zipPath);
+
+            var extractedPath = Path.Combine(libPath, fileName);
+            if (Directory.Exists(extractedPath))
+            {
+                string[] files = Directory.GetFiles(extractedPath);
+                // Move the files to the lib
+                foreach (string s in files)
                 {
-                    new DirectoryInfo(libPath).GetFileSystemInfos().ToList().ForEach(x =>
-                    {
-                        if (x is DirectoryInfo di)
-                            di.Delete(true);
-                        else
-                            x.Delete();
-                    });
+                    var sourceFileName = Path.GetFileName(s);
+                    var destFile = Path.Combine(libPath, sourceFileName);
+                    File.Move(s, destFile);
                 }
-                var zipPath = Path.Combine(libPath, "twitch-cli_1.1.12_Windows_x86_64.zip");
-                Log.Logger.Information($"Downloading Twitch-CLI to {zipPath}...");
-                client.DownloadFile(@"https://github.com/twitchdev/twitch-cli/releases/download/v1.1.12/twitch-cli_1.1.12_Windows_x86_64.zip", zipPath);
-                ZipFile.ExtractToDirectory(zipPath, libPath, true);
-                File.Delete(zipPath);
-
-                var extractedPath = Path.Combine(libPath, "twitch-cli_1.1.12_Windows_x86_64");
-                if (Directory.Exists(extractedPath))
-                {
-                    string[] files = Directory.GetFiles(extractedPath);
-
-                    // Move the files to the lib
-                    foreach (string s in files)
-                    {
-                        var fileName = Path.GetFileName(s);
-                        var destFile = Path.Combine(libPath, fileName);
-                        File.Move(s, destFile);
-                    }
-
-                    // Remove empty folder
-                    Directory.Delete(extractedPath, true);
-                }
+                // Remove empty folder
+                Directory.Delete(extractedPath, true);
             }
         }
 
@@ -406,10 +410,7 @@ namespace RecentFollowers
             try
             {
                 Log.Logger.Information($"Loading Twitch avatar for user {twitchUser.DisplayName}...");
-                using (var client = new WebClient())
-                    //This just saves the png but we want more: we add the user name to it
-                    //client.DownloadFile(twitchUser.ProfileImageUrl, Path.Combine(outputFolder, fileName));
-                    byteArray = client.DownloadData(twitchUser.ProfileImageUrl);
+                byteArray = client.GetByteArrayAsync(twitchUser.ProfileImageUrl).Result;
             }
             catch (Exception ex)
             {
