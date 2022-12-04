@@ -3,7 +3,6 @@ using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Timers;
@@ -17,12 +16,13 @@ using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.Fonts;
 using System.Linq;
 using System.Net.Http;
-using System.Security.Policy;
 
 namespace RecentFollowers
 {
     class Program
     {
+        private static readonly string currentTwitchCliVersion = "1.1.12";
+
         private static readonly HttpClient client = new HttpClient();
 
         private static int currentFollower = -1;
@@ -98,7 +98,7 @@ namespace RecentFollowers
             else
             {
                 var cliVersion = await Cli.Wrap("lib/twitch.exe").WithArguments("version").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
-                if (cliVersion.StandardOutput != "twitch-cli/1.1.12\n")
+                if (cliVersion.StandardOutput != $"twitch-cli/{currentTwitchCliVersion}\n")
                 {
                     getTwitchCliFromGitHub(libPath);
                 }
@@ -215,12 +215,12 @@ namespace RecentFollowers
                 });
             }
 
-            var currentVersion = "1.1.12";
-            var fileName = $"twitch-cli_{currentVersion}_Windows_x86_64";
+            
+            var fileName = $"twitch-cli_{currentTwitchCliVersion}_Windows_x86_64";
             var zipPath = Path.Combine(libPath, $"{fileName}.zip");
 
             Log.Logger.Information($"Downloading Twitch-CLI to {zipPath}...");
-            var byteArray = client.GetByteArrayAsync($@"https://github.com/twitchdev/twitch-cli/releases/download/v{currentVersion}/{fileName}.zip").Result;
+            var byteArray = client.GetByteArrayAsync($@"https://github.com/twitchdev/twitch-cli/releases/download/v{currentTwitchCliVersion}/{fileName}.zip").Result;
             File.WriteAllBytes(zipPath, byteArray);
             ZipFile.ExtractToDirectory(zipPath, libPath, true);
             File.Delete(zipPath);
