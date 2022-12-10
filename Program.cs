@@ -87,8 +87,11 @@ namespace RecentFollowers
             // Name this thing
             Console.Title = "Recent Twitch Followers";
 
+            // Physical path to executable
+            var baseDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+
             // We need the twitch-cli libary for this
-            var libPath = Path.Combine(Directory.GetCurrentDirectory(), "lib");
+            var libPath = Path.Combine(baseDir, "lib");
 
             // Get the twitch-cli if not present
             if (!File.Exists(Path.Combine(libPath, "twitch.exe")))
@@ -105,7 +108,7 @@ namespace RecentFollowers
             }
 
             // initialize outputFolder
-            outputFolder = Path.Combine(Directory.GetCurrentDirectory(), "output");
+            outputFolder = Path.Combine(baseDir, "output");
 
             // first argument: custom output path
             if (args.Length > 0)

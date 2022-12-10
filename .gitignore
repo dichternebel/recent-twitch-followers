@@ -5,5 +5,5 @@
 /.vs
 /obj
 /bin
-/RecentFollowers.csproj.user
 /App.config
+*.user
