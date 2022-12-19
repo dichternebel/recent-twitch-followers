@@ -33,7 +33,7 @@ Please have a look at my [Twitch channel](https://twitch.tv/dichternebe1) to see
 
 ## How does it work?
 Simple!
-- Download the zip file from the [Releases](/dichternebel/recent-twitch-followers/releases/latest/) section.
+- Download the zip file from the [Releases](https://github.com//dichternebel/recent-twitch-followers/releases/latest/) section.
 - Extract and start the executable somewhere e.g. in C:\StreamingTools
 - Optional: If you want to have the output folder somewhere else, just call the executable once with a parameter pointing to that location (relative or absolute).
 - Enter your Twitch username, hit enter and that's it.
