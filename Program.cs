@@ -21,7 +21,7 @@ namespace RecentFollowers
 {
     class Program
     {
-        private static readonly string currentTwitchCliVersion = "1.1.12";
+        private static readonly string currentTwitchCliVersion = "1.1.20";
 
         private static readonly HttpClient client = new HttpClient();
 
