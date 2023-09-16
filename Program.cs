@@ -3,6 +3,8 @@ using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Timers;
@@ -14,8 +16,6 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.Fonts;
-using System.Linq;
-using System.Net.Http;
 
 namespace RecentFollowers
 {
@@ -132,8 +132,8 @@ namespace RecentFollowers
             var authProcess = Process.Start("lib/twitch.exe", new string[] { "configure", "-i", clientID, "-s", clientSecret });
             authProcess.WaitForExit();
 
-            var tokenProcess = Process.Start("lib/twitch.exe", new string[] { "token" });
-            tokenProcess.WaitForExit();
+            var result = await Cli.Wrap("lib/twitch.exe").WithArguments($"token -u -s moderator:read:followers").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
+            Log.Logger.Information(result.StandardError);
 
             var userFile = "user.json";
 
@@ -373,12 +373,12 @@ namespace RecentFollowers
             try
             {
                 // Get the five most recent followers
-                var result = await Cli.Wrap("lib/twitch.exe").WithArguments($"api get /users/follows -q to_id={twitchStreamer.Id} -q first=5").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
+                var result = await Cli.Wrap("lib/twitch.exe").WithArguments($"api get /channels/followers -q broadcaster_id={twitchStreamer.Id} -q first=5").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
                 followerListObject = JsonSerializer.Deserialize<FollowerListObject>(result.StandardOutput);
             }
             catch (Exception ex)
             {
-                Log.Logger.Error($"[GetAvatarFromTwitch]: {ex.Message}");
+                Log.Logger.Error($"[GetFollowersFromTwitch]: {ex.Message}");
                 followerListChanged = null;
             }
 

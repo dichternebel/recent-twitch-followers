@@ -6,26 +6,17 @@ namespace RecentFollowers
 {
     public class Follower
     {
-        //[JsonPropertyName("followed_at")]
-        //public DateTime FollowedAt { get; set; }
-
-        [JsonPropertyName("from_id")]
+        [JsonPropertyName("user_id")]
         public string FromId { get; set; }
 
-        [JsonPropertyName("from_login")]
-        public string FollowerId { get; set; }
-
-        [JsonPropertyName("from_name")]
+        [JsonPropertyName("user_name")]
         public string FollowerName { get; set; }
 
-        //[JsonPropertyName("to_id")]
-        //public string ToId { get; set; }
+        [JsonPropertyName("user_login")]
+        public string FollowerId { get; set; }
 
-        //[JsonPropertyName("to_login")]
-        //public string ToLogin { get; set; }
-
-        //[JsonPropertyName("to_name")]
-        //public string ToName { get; set; }
+        [JsonPropertyName("followed_at")]
+        public DateTime FollowedAt { get; set; }
     }
 
     public class Pagination

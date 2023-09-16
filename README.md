@@ -16,8 +16,6 @@ This small console application will gather public information from your Twitch a
 In fact I've been using [Streamlabs Labels](https://streamlabs.com/content-hub/post/setting-up-stream-labels) before, but I wasn't able to create a recent follower rotation with their given output. So I did this thing here.
 
 Plus this app
-- works without requiring any Twitch access grants whatsoever
-- does not ask for moderator role of your chat
 - follows the least privilege principal
 - uses the official [twitch-cli](https://github.com/twitchdev/twitch-cli) for accessing Twitch API
 - runs at minimal CPU with no measurable GPU usage.

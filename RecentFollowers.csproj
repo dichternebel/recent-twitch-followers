@@ -9,7 +9,7 @@
     <ApplicationIcon>assets/twitch.ico</ApplicationIcon>
     <Platforms>AnyCPU;x64</Platforms>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-    <Version>1.3.2</Version>
+    <Version>1.4.0</Version>
     <Authors>dichternebel</Authors>
     <RepositoryType></RepositoryType>
     <Company />
