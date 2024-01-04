@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
@@ -6,6 +7,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -21,7 +23,7 @@ namespace RecentFollowers
 {
     class Program
     {
-        private static readonly string currentTwitchCliVersion = "1.1.20";
+        private static readonly string currentTwitchCliVersion = "1.1.22";
 
         private static readonly HttpClient client = new HttpClient();
 
@@ -128,12 +130,12 @@ namespace RecentFollowers
             clientID = ConfigurationManager.AppSettings["ClientID"];
             clientSecret = ConfigurationManager.AppSettings["ClientSecret"];
 
-            // Get permission and token
+            // Get permission
             var authProcess = Process.Start("lib/twitch.exe", new string[] { "configure", "-i", clientID, "-s", clientSecret });
             authProcess.WaitForExit();
 
-            var result = await Cli.Wrap("lib/twitch.exe").WithArguments($"token -u -s moderator:read:followers").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
-            Log.Logger.Information(result.StandardError);
+            // Get or use existing user access token
+            var userLogin = await authorize();
 
             var userFile = "user.json";
 
@@ -154,11 +156,8 @@ namespace RecentFollowers
             }
             else
             {
-                Console.Write("Enter your Twitch name: ");
-                var userName = Console.ReadLine();
-
                 // Get Twitch user
-                twitchStreamer = await GetTwitchUserByName(userName);
+                twitchStreamer = await GetTwitchUserByName(userLogin);
                 // Set the given output folder
                 twitchStreamer.OutputFolder = outputFolder;
             }
@@ -242,6 +241,106 @@ namespace RecentFollowers
                 // Remove empty folder
                 Directory.Delete(extractedPath, true);
             }
+        }
+
+        private static string extractPhrase(string input, string phrase)
+        {
+            // Define the pattern for the phrase
+            var pattern = new Regex($@"{phrase}\s+(\S+)");
+
+            // Match the pattern in the input string
+            var match = pattern.Match(input);
+
+            // Check if a match is found and return the captured token value
+            return match.Success == true ? match.Groups[1].Value : null;
+        }
+
+        private static async Task<string> authorize()
+        {
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var pathToViperConf = Path.Combine(appDataPath, "twitch-cli/.twitch-cli.env");
+            var accessToken = string.Empty;
+            var refreshToken = string.Empty;
+
+            if (File.Exists(pathToViperConf))
+            {
+                var viperContent = File.ReadAllLines(pathToViperConf);
+                var foundAccessToken = viperContent.FirstOrDefault(s => s.StartsWith("ACCESSTOKEN", StringComparison.OrdinalIgnoreCase));
+                if (foundAccessToken != null)
+                {
+                    accessToken = foundAccessToken.Replace("ACCESSTOKEN=", string.Empty);
+                }
+                var foundRefreshToken = viperContent.FirstOrDefault(s => s.StartsWith("REFRESHTOKEN", StringComparison.OrdinalIgnoreCase));
+                if (foundRefreshToken != null)
+                {
+                    refreshToken = foundRefreshToken.Replace("REFRESHTOKEN=", string.Empty);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                var result1 = await Cli.Wrap("lib/twitch.exe").WithArguments($"token -v {accessToken}").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
+                /*
+                Wrong Access Token result:
+                Client ID: 
+                Token Type: App Access Token
+                Expires In: 0 (Mon, 01 Jan 1970 13:33:37 UTC)
+                User ID: None
+
+                Correct result:
+                Client ID: YourClientIdGoesHere
+                Token Type: User Access Token
+                User ID: 123456789
+                User Login: johndoe
+                Expires In: 1337 (Mon, 01 Jan 2024 13:33:37 UTC)
+                Scopes:
+                - moderator:read:followers
+                */
+
+                // ignoring the scope, token type ... should be fine
+                if (extractPhrase(result1.StandardOutput, "User ID:") != "None")
+                {
+                    var userLogin1 = extractPhrase(result1.StandardOutput, "User Login:");
+                    return userLogin1;
+                }
+
+                // Try to refresh the token using an API call as long as twitch-cli does not support it oob
+                // https://github.com/twitchdev/twitch-cli/issues/307
+
+                var tokenEndpoint = "https://id.twitch.tv/oauth2/token";
+                var content = new FormUrlEncodedContent(new[]
+                {
+                    new KeyValuePair<string, string>("client_id", clientID),
+                    new KeyValuePair<string, string>("client_secret", clientSecret),
+                    new KeyValuePair<string, string>("grant_type", "refresh_token"),
+                    new KeyValuePair<string, string>("refresh_token", refreshToken),
+                });
+
+                var response = await client.PostAsync(tokenEndpoint, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    
+                    // Parse the JSON response to get the new access token
+                    var refreshTokenResponse = JsonSerializer.Deserialize<RefreshTokenResponse>(responseContent);
+
+                    result1 = await Cli.Wrap("lib/twitch.exe").WithArguments($"token -v {refreshTokenResponse.AccessToken}").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
+                    if (extractPhrase(result1.StandardOutput, "User ID:") != "None")
+                    {
+                        var userLogin1 = extractPhrase(result1.StandardOutput, "User Login:");
+                        return userLogin1;
+                    }
+                }
+                else
+                {
+                    Log.Logger.Error($"Failed to refresh access token. Status Code: {response.StatusCode}");
+                }
+            }
+
+            var result2 = await Cli.Wrap("lib/twitch.exe").WithArguments($"token -u -s moderator:read:followers").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
+            Log.Logger.Information(result2.StandardError);
+            var userLogin2 = extractPhrase(result2.StandardError, "User Login:");
+            return userLogin2;
         }
 
         private static void runHeartbeatTask(object sender, System.Timers.ElapsedEventArgs e)
