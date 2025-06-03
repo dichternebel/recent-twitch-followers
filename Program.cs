@@ -142,7 +142,7 @@ namespace RecentFollowers
             if (File.Exists(userFile))
             {
                 var jsonString = File.ReadAllText(userFile);
-                twitchStreamer = JsonSerializer.Deserialize<TwitchUser>(jsonString);
+                twitchStreamer = JsonSerializer.Deserialize(jsonString, JsonContext.Default.TwitchUser);
 
                 // New output folder passed as argument
                 if (args.Length > 0)
@@ -322,7 +322,8 @@ namespace RecentFollowers
                     var responseContent = await response.Content.ReadAsStringAsync();
                     
                     // Parse the JSON response to get the new access token
-                    var refreshTokenResponse = JsonSerializer.Deserialize<RefreshTokenResponse>(responseContent);
+                    //var refreshTokenResponse = JsonSerializer.Deserialize<RefreshTokenResponse>(responseContent);
+                    var refreshTokenResponse = JsonSerializer.Deserialize(responseContent, JsonContext.Default.RefreshTokenResponse);
 
                     result1 = await Cli.Wrap("lib/twitch.exe").WithArguments($"token -v {refreshTokenResponse.AccessToken}").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
                     if (extractPhrase(result1.StandardOutput, "User ID:") != "None")
@@ -369,7 +370,8 @@ namespace RecentFollowers
             try
             {
                 var result = await Cli.Wrap("lib/twitch.exe").WithArguments($"api get /streams -q user_id={twitchStreamer.Id}").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
-                var streamObject = JsonSerializer.Deserialize<StreamObject>(result.StandardOutput);
+                //var streamObject = JsonSerializer.Deserialize<StreamObject>(result.StandardOutput);
+                var streamObject = JsonSerializer.Deserialize(result.StandardOutput, JsonContext.Default.StreamObject);
 
                 if (streamObject.Streams.Count > 0)
                 {
@@ -473,7 +475,8 @@ namespace RecentFollowers
             {
                 // Get the five most recent followers
                 var result = await Cli.Wrap("lib/twitch.exe").WithArguments($"api get /channels/followers -q broadcaster_id={twitchStreamer.Id} -q first=5").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
-                followerListObject = JsonSerializer.Deserialize<FollowerListObject>(result.StandardOutput);
+                //followerListObject = JsonSerializer.Deserialize<FollowerListObject>(result.StandardOutput);
+                followerListObject = JsonSerializer.Deserialize(result.StandardOutput, JsonContext.Default.FollowerListObject);
             }
             catch (Exception ex)
             {
@@ -493,7 +496,8 @@ namespace RecentFollowers
             {
                 Log.Logger.Information($"Getting Twitch user information from {userName}...");
                 var userResult = await Cli.Wrap("lib/twitch.exe").WithArguments($"api get /users -q login={userName}").WithWorkingDirectory(Directory.GetCurrentDirectory()).ExecuteBufferedAsync();
-                twitchUser = JsonSerializer.Deserialize<TwitchUserObject>(userResult.StandardOutput).Data[0];
+                //twitchUser = JsonSerializer.Deserialize<TwitchUserObject>(userResult.StandardOutput).Data[0];
+                twitchUser = JsonSerializer.Deserialize(userResult.StandardOutput, JsonContext.Default.TwitchUserObject).Data[0];
             }
             catch (Exception ex)
             {

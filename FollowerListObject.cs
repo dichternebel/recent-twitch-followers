@@ -19,7 +19,7 @@ namespace RecentFollowers
         public DateTime FollowedAt { get; set; }
     }
 
-    public class Pagination
+    public class FollowerPagination
     {
         [JsonPropertyName("cursor")]
         public string Cursor { get; set; }
@@ -31,7 +31,7 @@ namespace RecentFollowers
         public List<Follower> Data { get; set; }
 
         [JsonPropertyName("pagination")]
-        public Pagination Pagination { get; set; }
+        public FollowerPagination Pagination { get; set; }
 
         [JsonPropertyName("total")]
         public int Total { get; set; }
